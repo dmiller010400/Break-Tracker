@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Break Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root{
+    --ink:#1B2130;
+    --ink-soft:#2B3346;
+    --paper:#F6F3EC;
+    --card:#FFFFFF;
+    --amber:#E2A63B;
+    --amber-deep:#C4831F;
+    --slate:#5B6472;
+    --slate-light:#8A93A3;
+    --line:#E3DDCC;
+    --line-soft:#EDE8DA;
+    --success:#4B7A5B;
+    --success-bg:#E9F2EB;
+    --danger:#B94A3D;
+    --danger-bg:#FBEAE7;
+    --break-bg:#FBF1DD;
+    --radius:14px;
+    --shadow: 0 1px 2px rgba(27,33,48,0.04), 0 8px 24px rgba(27,33,48,0.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--amber); color:var(--ink);}
+
+  .app{max-width:960px;margin:0 auto;padding:0 20px 64px;}
+
+  /* HEADER */
+  header.top{
+    background:var(--ink);
+    color:#fff;
+    padding:22px 20px 0;
+    border-radius:0 0 20px 20px;
+    margin-bottom:28px;
+  }
+  .top-inner{max-width:920px;margin:0 auto;}
+  .brand{
+    display:flex;align-items:baseline;gap:10px;margin-bottom:18px;
+  }
+  .brand .mark{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;font-size:20px;letter-spacing:0.02em;
+  }
+  .brand .mark span{color:var(--amber);}
+  .brand .sub{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;color:#9AA3B5;letter-spacing:0.06em;text-transform:uppercase;
+  }
+  .tabs{display:flex;gap:4px;}
+  .tab{
+    flex:1;text-align:center;padding:12px 10px;
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;
+    color:#9AA3B5;cursor:pointer;border-radius:10px 10px 0 0;
+    transition:color .15s ease, background .15s ease;
+    background:transparent;
+  }
+  .tab.active{color:var(--ink);background:var(--paper);}
+  .tab:not(.active):hover{color:#D7DCE6;}
+
+  /* CARD */
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:28px;
+    border:1px solid var(--line-soft);
+  }
+  .card + .card{margin-top:20px;}
+
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;}
+  h2{font-size:19px;font-weight:600;}
+  p.hint{color:var(--slate);font-size:13.5px;line-height:1.5;margin:6px 0 0;}
+
+  /* EMPLOYEE PICK */
+  .picker-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  select, input[type=password], input[type=month], input[type=text]{
+    font-family:'Inter',sans-serif;font-size:15px;
+    padding:12px 14px;border-radius:10px;border:1.5px solid var(--line);
+    background:#fff;color:var(--ink);outline:none;
+    transition:border-color .15s ease;
+  }
+  select{flex:1;min-width:220px;}
+  select:focus, input:focus{border-color:var(--amber-deep);}
+
+  button{
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14.5px;
+    padding:12px 20px;border-radius:10px;border:none;cursor:pointer;
+    transition:transform .08s ease, filter .15s ease, background .15s ease;
+  }
+  button:active{transform:scale(0.98);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.15);}
+  .btn-amber{background:var(--amber);color:var(--ink);}
+  .btn-amber:hover:not(:disabled){background:var(--amber-deep);}
+  .btn-danger{background:var(--danger-bg);color:var(--danger);}
+  .btn-danger:hover:not(:disabled){background:var(--danger);color:#fff;}
+  .btn-ghost{background:transparent;color:var(--slate);border:1.5px solid var(--line);}
+  .btn-ghost:hover:not(:disabled){border-color:var(--slate-light);color:var(--ink);}
+  .btn-sm{padding:8px 14px;font-size:13px;border-radius:8px;}
+
+  /* PUNCH CLOCK */
+  .punch-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;}
+  .who{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;}
+  .who .switch{
+    font-family:'Inter',sans-serif;font-size:12.5px;font-weight:500;color:var(--slate);
+    cursor:pointer;text-decoration:underline;margin-left:10px;
+  }
+  .clock-face{
+    text-align:center;padding:30px 10px 26px;
+    background:var(--ink);border-radius:14px;color:#fff;margin:20px 0;
+    position:relative;overflow:hidden;
+  }
+  .clock-face .digits{
+    font-family:'IBM Plex Mono',monospace;font-size:46px;font-weight:600;
+    letter-spacing:0.02em;line-height:1;
+  }
+  .clock-face .date{
+    font-family:'Inter',sans-serif;font-size:13px;color:#9AA3B5;margin-top:8px;
+    text-transform:uppercase;letter-spacing:0.08em;
+  }
+  .status-badge{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:8px 16px;border-radius:100px;font-size:13.5px;font-weight:600;
+    margin-top:16px;font-family:'Inter',sans-serif;
+  }
+  .status-badge .dot{width:8px;height:8px;border-radius:50%;}
+  .status-none{background:#2B3346;color:#B7BECC;}
+  .status-none .dot{background:#8A93A3;}
+  .status-break{background:rgba(226,166,59,0.2);color:#F3C978;}
+  .status-break .dot{background:var(--amber);box-shadow:0 0 0 3px rgba(226,166,59,0.28);}
+
+  .action-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+  .action-row button{min-width:160px;padding:14px 22px;font-size:15px;}
+
+  /* TODAY SUMMARY */
+  .summary-title{
+    font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;
+    text-transform:uppercase;letter-spacing:0.06em;color:var(--slate);margin:24px 0 12px;
+  }
+  .breaks-list{display:flex;flex-direction:column;gap:8px;}
+  .break-row{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--break-bg);border-radius:10px;padding:10px 14px;
+    font-family:'IBM Plex Mono',monospace;font-size:13.5px;
+  }
+  .break-row .lbl{font-family:'Inter',sans-serif;font-weight:600;color:var(--ink);font-size:13.5px;}
+  .totals-row{
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;
+    margin-top:16px;padding-top:16px;border-top:1.5px dashed var(--line);
+  }
+  .total-box{flex:1;min-width:140px;}
+  .total-box .lbl{font-size:12px;color:var(--slate);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;}
+  .total-box .val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;}
+  .empty-note{color:var(--slate-light);font-size:13.5px;font-style:italic;}
+
+  /* SUPERVISOR LOCK */
+  .lock-wrap{max-width:400px;margin:0 auto;text-align:center;padding:20px 0 6px;}
+  .lock-icon{
+    width:56px;height:56px;border-radius:14px;background:var(--ink);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+  }
+  .lock-form{display:flex;flex-direction:column;gap:10px;margin-top:20px;}
+  .error-text{color:var(--danger);font-size:13px;font-weight:500;margin-top:2px;}
+
+  /* SUPERVISOR DASHBOARD */
+  .toolbar{
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+    margin-bottom:18px;
+  }
+  .toolbar .left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .toolbar .right{display:flex;gap:8px;flex-wrap:wrap;}
+
+  .active-strip{
+    display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;
+  }
+  .active-chip{
+    display:flex;align-items:center;gap:7px;
+    background:var(--paper);border:1.5px solid var(--line);border-radius:100px;
+    padding:6px 14px 6px 8px;font-size:12.5px;font-weight:500;
+  }
+  .active-chip .dot{width:7px;height:7px;border-radius:50%;}
+  .active-chip.working .dot{background:var(--success);}
+  .active-chip.onbreak .dot{background:var(--amber-deep);}
+
+  table.report{
+    width:100%;border-collapse:collapse;font-size:13px;
+  }
+  table.report thead th{
+    background:var(--ink);color:#fff;font-family:'Space Grotesk',sans-serif;
+    font-weight:600;text-align:left;padding:10px 12px;white-space:nowrap;
+    position:sticky;top:0;
+  }
+  table.report thead th:first-child{border-radius:8px 0 0 0;}
+  table.report thead th:last-child{border-radius:0 8px 0 0;}
+  table.report tbody td{
+    padding:9px 12px;border-bottom:1px solid var(--line-soft);white-space:nowrap;
+    font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);
+  }
+  table.report tbody td.name-cell{font-family:'Inter',sans-serif;font-weight:600;color:var(--ink);}
+  table.report tbody tr:hover{background:var(--paper);}
+  table.report tbody td.total-cell{font-weight:700;color:var(--amber-deep);}
+  table.report tbody td.total-cell.over-limit{color:var(--danger);}
+  .total-box .val.over-limit{color:var(--danger);}
+  .table-scroll{overflow-x:auto;border-radius:10px;border:1px solid var(--line-soft);}
+
+  .settings-block{
+    margin-top:24px;padding-top:20px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;
+  }
+  .danger-zone{
+    background:var(--danger-bg);border-radius:10px;padding:16px;flex:1;min-width:260px;
+  }
+  .danger-zone h3{font-size:14px;color:var(--danger);margin-bottom:6px;}
+  .passkey-change{flex:1;min-width:260px;}
+  .passkey-change h3{font-size:14px;margin-bottom:6px;}
+  .inline-form{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+
+  .confirm-box{
+    background:#fff;border:2px solid var(--danger);border-radius:10px;
+    padding:16px;margin-top:12px;
+  }
+  .confirm-box p{margin:0 0 10px;font-size:13.5px;color:var(--ink-soft);}
+
+  footer.note{
+    text-align:center;color:var(--slate-light);font-size:12px;margin-top:24px;line-height:1.6;
+  }
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:12px 22px;border-radius:10px;
+    font-size:13.5px;font-weight:500;box-shadow:var(--shadow);
+    opacity:0;pointer-events:none;transition:opacity .25s ease, transform .25s ease;
+    z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+  @media (max-width:600px){
+    .clock-face .digits{font-size:34px;}
+    .card{padding:20px;}
+    header.top{padding:18px 16px 0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <div class="mark">Break<span>Tracker</span></div>
+        <div class="sub">Daily clock-in log</div>
+      </div>
+      <div class="tabs">
+        <div class="tab active" id="tabEmployee" onclick="switchTab('employee')">Employee</div>
+        <div class="tab" id="tabSupervisor" onclick="switchTab('supervisor')">Supervisor</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- EMPLOYEE VIEW -->
+  <div id="viewEmployee">
+
+    <div class="card" id="pickCard">
+      <h2>Who's clocking in?</h2>
+      <p class="hint">Select your name to view or start today's log.</p>
+      <div class="picker-row">
+        <select id="employeeSelect">
+          <option value="">Select your name…</option>
+        </select>
+        <button class="btn-primary" onclick="selectEmployee()">Continue</button>
+      </div>
+    </div>
+
+    <div class="card" id="punchCard" style="display:none;">
+      <div class="punch-head">
+        <div class="who" id="whoName">—<span class="switch" onclick="backToPicker()">switch employee</span></div>
+      </div>
+
+      <div class="clock-face">
+        <div class="digits" id="liveClock">--:--:--</div>
+        <div class="date" id="liveDate">—</div>
+        <div class="status-badge status-none" id="statusBadge"><span class="dot"></span><span id="statusText">Not clocked in</span></div>
+      </div>
+
+      <div class="action-row" id="actionRow"></div>
+
+      <div class="summary-title">Today's breaks</div>
+      <div class="breaks-list" id="breaksList"><div class="empty-note">No breaks logged yet today.</div></div>
+
+      <div class="totals-row">
+        <div class="total-box">
+          <div class="lbl">Total break time</div>
+          <div class="val" id="totalBreakVal">0m</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPERVISOR VIEW -->
+  <div id="viewSupervisor" style="display:none;">
+
+    <div class="card" id="lockCard">
+      <div class="lock-wrap">
+        <div class="lock-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 10V8a6 6 0 1112 0v2M5 10h14a1 1 0 011 1v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9a1 1 0 011-1z" stroke="#E2A63B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h2>Supervisor access</h2>
+        <p class="hint">Enter the passkey to view break reports and manage data.</p>
+        <div class="lock-form">
+          <input type="password" id="passkeyInput" placeholder="Passkey" onkeydown="if(event.key==='Enter')unlockSupervisor()">
+          <button class="btn-amber" onclick="unlockSupervisor()">Unlock</button>
+          <div class="error-text" id="passkeyError" style="display:none;">Incorrect passkey. Try again.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="dashboard" style="display:none;">
+      <div class="card">
+        <div class="active-strip" id="activeStrip"></div>
+
+        <div class="toolbar">
+          <div class="left">
+            <input type="month" id="monthPicker">
+            <span class="hint" id="recordCount" style="margin:0;"></span>
+          </div>
+          <div class="right">
+            <button class="btn-ghost btn-sm" onclick="lockSupervisor()">Lock</button>
+            <button class="btn-primary btn-sm" onclick="downloadExcel()">Download Excel</button>
+          </div>
+        </div>
+
+        <div class="table-scroll">
+          <table class="report" id="reportTable"></table>
+        </div>
+
+        <div class="settings-block">
+          <div class="passkey-change">
+            <h3>Change passkey</h3>
+            <p class="hint">Update the supervisor passkey used to unlock this dashboard.</p>
+            <div class="inline-form">
+              <input type="password" id="newPasskey" placeholder="New passkey" style="flex:1;min-width:140px;">
+              <button class="btn-ghost btn-sm" onclick="changePasskey()">Save</button>
+            </div>
+          </div>
+          <div class="danger-zone">
+            <h3>Reset all data</h3>
+            <p class="hint" style="color:#8a4a41;">Permanently erases every clock-in, break and clock-out record for all employees. This cannot be undone.</p>
+            <button class="btn-danger btn-sm" onclick="showResetConfirm()">Reset all data…</button>
+            <div class="confirm-box" id="resetConfirmBox" style="display:none;">
+              <p>Type <strong>RESET</strong> below to confirm. All records will be permanently deleted.</p>
+              <div class="inline-form">
+                <input type="text" id="resetConfirmInput" placeholder="Type RESET">
+                <button class="btn-danger btn-sm" onclick="doReset()">Confirm reset</button>
+                <button class="btn-ghost btn-sm" onclick="hideResetConfirm()">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="note">Records are stored centrally and shared across everyone using this tracker.</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- CONFIG ---------------- */
+const EMPLOYEES = ["Arnab Bakuly","Dipanjan Roy Chowdhury","Dhrubajit Gope","Shirsendu Das","Ranjith Nair",
+"Hemanshi Swami","Dipika Neogi","Battula Tejeswani","Anisha Balmiki","Shubhajit Ghosh","Inzemam Ali",
+"Manjari Majumder","Riya Oraon","Samriddhi Das","Shireen Agnes Toppo","Sreyashi Gupta","Dabolina Samaddar",
+"Digantika Chowdhury","Nikki Upadhyay","Santapan Dolui","Anisha Neogy","Nihal Thapa","Rittik Monda",
+"Rahul Navin Gupta","Praatek Saha","Sagar Jamatia","Anjali Shah","Ankita Halder","Vikash Yadav",
+"Shubhajit Gorai","Shreya Tiwari","Mim Mukherjee","Aakash Bhakta"].sort();
+
+const RECORDS_KEY = "break-tracker-records";
+const SETTINGS_KEY = "break-tracker-settings";
+const DEFAULT_PASSKEY = "Break@2026";
+
+let currentEmployee = null;
+let localRecords = [];
+let supervisorUnlocked = false;
+
+/* ---------------- UTIL ---------------- */
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function nowISO(){ return new Date().toISOString(); }
+function fmtTime(iso){
+  if(!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+function fmtDateHuman(dateStr){
+  const [y,m,d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  return dt.toLocaleDateString([], {day:'2-digit', month:'short', year:'numeric'});
+}
+function minsBetween(isoA, isoB){
+  if(!isoA || !isoB) return 0;
+  return Math.round((new Date(isoB) - new Date(isoA))/60000);
+}
+function minsToHM(mins){
+  if(!mins || mins <= 0) return "0m";
+  const h = Math.floor(mins/60), m = mins%60;
+  return (h>0? h+"h ":"") + m+"m";
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---------------- STORAGE ---------------- */
+async function loadRecords(){
+  try{
+    const res = await window.storage.get(RECORDS_KEY, true);
+    return res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){ return []; }
+}
+async function saveRecords(records){
+  try{
+    await window.storage.set(RECORDS_KEY, JSON.stringify(records), true);
+    return true;
+  }catch(e){ showToast("Couldn't save — check your connection."); return false; }
+}
+async function updateRecords(mutator){
+  const latest = await loadRecords();
+  const updated = mutator(latest);
+  const ok = await saveRecords(updated);
+  if(ok){ localRecords = updated; }
+  return ok;
+}
+async function loadSettings(){
+  try{
+    const res = await window.storage.get(SETTINGS_KEY, true);
+    return res && res.value ? JSON.parse(res.value) : {passkey: DEFAULT_PASSKEY};
+  }catch(e){ return {passkey: DEFAULT_PASSKEY}; }
+}
+async function saveSettings(settings){
+  try{
+    await window.storage.set(SETTINGS_KEY, JSON.stringify(settings), true);
+    return true;
+  }catch(e){ showToast("Couldn't save settings."); return false; }
+}
+
+/* ---------------- TABS ---------------- */
+function switchTab(which){
+  document.getElementById('tabEmployee').classList.toggle('active', which==='employee');
+  document.getElementById('tabSupervisor').classList.toggle('active', which==='supervisor');
+  document.getElementById('viewEmployee').style.display = which==='employee' ? 'block':'none';
+  document.getElementById('viewSupervisor').style.display = which==='supervisor' ? 'block':'none';
+  if(which==='supervisor' && supervisorUnlocked){ renderDashboard(); }
+}
+
+/* ---------------- EMPLOYEE FLOW ---------------- */
+function populateEmployeeSelect(){
+  const sel = document.getElementById('employeeSelect');
+  EMPLOYEES.forEach(name=>{
+    const opt = document.createElement('option');
+    opt.value = name; opt.textContent = name;
+    sel.appendChild(opt);
+  });
+}
+
+function selectEmployee(){
+  const sel = document.getElementById('employeeSelect');
+  if(!sel.value){ showToast("Please select your name first."); return; }
+  currentEmployee = sel.value;
+  document.getElementById('pickCard').style.display = 'none';
+  document.getElementById('punchCard').style.display = 'block';
+  document.getElementById('whoName').firstChild.textContent = currentEmployee;
+  refreshPunchView();
+}
+function backToPicker(){
+  currentEmployee = null;
+  document.getElementById('punchCard').style.display = 'none';
+  document.getElementById('pickCard').style.display = 'block';
+  document.getElementById('employeeSelect').value = "";
+}
+
+function getTodayRecord(records){
+  const t = todayStr();
+  return records.find(r => r.employee === currentEmployee && r.date === t) || null;
+}
+function getStatus(rec){
+  if(!rec) return 'idle';
+  const openBreak = rec.breaks.find(b=>!b.end);
+  if(openBreak) return 'on_break';
+  return 'idle';
+}
+
+async function refreshPunchView(){
+  localRecords = await loadRecords();
+  renderPunchView();
+}
+
+function renderPunchView(){
+  if(!currentEmployee) return;
+  const rec = getTodayRecord(localRecords);
+  const status = getStatus(rec);
+
+  const badge = document.getElementById('statusBadge');
+  const statusText = document.getElementById('statusText');
+  badge.className = 'status-badge status-' + (status==='on_break'?'break':'none');
+
+  if(status==='idle') statusText.textContent = (rec && rec.breaks.length) ? (rec.breaks.length + (rec.breaks.length===1?' break':' breaks') + ' logged today') : 'No breaks logged yet today';
+  else if(status==='on_break') statusText.textContent = 'On break since ' + fmtTime(rec.breaks.find(b=>!b.end).start);
+
+  // action buttons
+  const row = document.getElementById('actionRow');
+  row.innerHTML = '';
+  if(status==='idle'){
+    row.appendChild(makeBtn('Start Break','btn-amber', startBreak));
+  } else if(status==='on_break'){
+    row.appendChild(makeBtn('End Break','btn-amber', endBreak));
+  }
+
+  // breaks list
+  const list = document.getElementById('breaksList');
+  list.innerHTML = '';
+  if(!rec || rec.breaks.length===0){
+    list.innerHTML = '<div class="empty-note">No breaks logged yet today.</div>';
+  } else {
+    rec.breaks.forEach((b, i)=>{
+      const div = document.createElement('div');
+      div.className = 'break-row';
+      const mins = b.end ? minsBetween(b.start,b.end) : minsBetween(b.start, nowISO());
+      div.innerHTML = `<span class="lbl">Break ${i+1}</span><span>${fmtTime(b.start)} → ${b.end?fmtTime(b.end):'ongoing'} · ${minsToHM(mins)}</span>`;
+      list.appendChild(div);
+    });
+  }
+
+  // totals
+  let totalBreak = 0;
+  if(rec){
+    rec.breaks.forEach(b=>{ totalBreak += b.end ? minsBetween(b.start,b.end) : minsBetween(b.start, nowISO()); });
+  }
+  const totalEl = document.getElementById('totalBreakVal');
+  totalEl.textContent = minsToHM(totalBreak);
+  totalEl.classList.toggle('over-limit', totalBreak > 60);
+}
+
+function makeBtn(label, cls, handler){
+  const b = document.createElement('button');
+  b.textContent = label; b.className = cls;
+  b.onclick = handler;
+  return b;
+}
+
+function findOrCreateTodayRecord(records){
+  const t = todayStr();
+  let r = records.find(r=>r.employee===currentEmployee && r.date===t);
+  if(!r){
+    r = {employee: currentEmployee, date: t, breaks: []};
+    records.push(r);
+  }
+  return r;
+}
+async function startBreak(){
+  await updateRecords(records=>{
+    const r = findOrCreateTodayRecord(records);
+    r.breaks.push({start: nowISO(), end: null});
+    return records;
+  });
+  showToast('Break started');
+  renderPunchView();
+}
+async function endBreak(){
+  const t = todayStr();
+  await updateRecords(records=>{
+    const r = records.find(r=>r.employee===currentEmployee && r.date===t);
+    if(r){ const ob = r.breaks.find(b=>!b.end); if(ob) ob.end = nowISO(); }
+    return records;
+  });
+  showToast('Break ended — back to work');
+  renderPunchView();
+}
+
+/* live clock */
+function tickClock(){
+  const now = new Date();
+  document.getElementById('liveClock').textContent = now.toLocaleTimeString();
+  document.getElementById('liveDate').textContent = now.toLocaleDateString([], {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
+  if(currentEmployee) renderPunchView();
+}
+
+/* ---------------- SUPERVISOR FLOW ---------------- */
+async function unlockSupervisor(){
+  const input = document.getElementById('passkeyInput').value;
+  const settings = await loadSettings();
+  if(input === settings.passkey){
+    supervisorUnlocked = true;
+    document.getElementById('passkeyError').style.display = 'none';
+    document.getElementById('lockCard').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('passkeyInput').value = '';
+    const mp = document.getElementById('monthPicker');
+    if(!mp.value){
+      const d = new Date();
+      mp.value = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+    }
+    await renderDashboard();
+  } else {
+    document.getElementById('passkeyError').style.display = 'block';
+  }
+}
+function lockSupervisor(){
+  supervisorUnlocked = false;
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('lockCard').style.display = 'block';
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const mp = document.getElementById('monthPicker');
+  mp.addEventListener('change', renderDashboard);
+});
+
+function filteredRecordsForMonth(){
+  const month = document.getElementById('monthPicker').value;
+  if(!month) return localRecords.slice();
+  return localRecords.filter(r=>r.date.startsWith(month)).sort((a,b)=> a.date===b.date ? a.employee.localeCompare(b.employee) : a.date.localeCompare(b.date));
+}
+
+function maxBreaksIn(records){
+  let max = 1;
+  records.forEach(r=>{ if(r.breaks.length > max) max = r.breaks.length; });
+  return max;
+}
+
+async function renderDashboard(){
+  localRecords = await loadRecords();
+  renderActiveStrip();
+  renderReportTable();
+}
+
+function renderActiveStrip(){
+  const t = todayStr();
+  const strip = document.getElementById('activeStrip');
+  const onBreakNow = localRecords.filter(r=>r.date===t && r.breaks.some(b=>!b.end));
+  strip.innerHTML = '';
+  if(onBreakNow.length===0){
+    strip.innerHTML = '<span class="hint" style="margin:0;">No one is on break right now.</span>';
+    return;
+  }
+  onBreakNow.forEach(r=>{
+    const chip = document.createElement('div');
+    chip.className = 'active-chip onbreak';
+    chip.innerHTML = `<span class="dot"></span>${r.employee} · on break`;
+    strip.appendChild(chip);
+  });
+}
+
+function renderReportTable(){
+  const records = filteredRecordsForMonth();
+  document.getElementById('recordCount').textContent = records.length + (records.length===1?' record':' records') + ' this month';
+  const n = maxBreaksIn(records);
+  const table = document.getElementById('reportTable');
+
+  let headCells = ['Employee','Date'];
+  for(let i=1;i<=n;i++){ headCells.push(`Break ${i} Start`, `Break ${i} End`, `Break ${i} Total`); }
+  headCells.push('Total Break');
+
+  let thead = '<thead><tr>' + headCells.map(h=>`<th>${h}</th>`).join('') + '</tr></thead>';
+
+  let rows = records.map(r=>{
+    let cells = [`<td class="name-cell">${r.employee}</td>`, `<td>${fmtDateHuman(r.date)}</td>`];
+    let totalBreak = 0;
+    for(let i=0;i<n;i++){
+      const b = r.breaks[i];
+      if(b){
+        const mins = b.end ? minsBetween(b.start,b.end) : minsBetween(b.start, nowISO());
+        totalBreak += mins;
+        cells.push(`<td>${fmtTime(b.start)}</td>`, `<td>${b.end?fmtTime(b.end):'ongoing'}</td>`, `<td>${mins} min</td>`);
+      } else {
+        cells.push('<td>—</td>','<td>—</td>','<td>—</td>');
+      }
+    }
+    const overLimit = totalBreak > 60;
+    cells.push(`<td class="total-cell${overLimit?' over-limit':''}">${totalBreak} min</td>`);
+    return '<tr>' + cells.join('') + '</tr>';
+  }).join('');
+
+  if(records.length===0){
+    rows = `<tr><td colspan="${headCells.length}" style="text-align:center;color:var(--slate-light);padding:24px;">No records for this month yet.</td></tr>`;
+  }
+
+  table.innerHTML = thead + '<tbody>' + rows + '</tbody>';
+}
+
+/* ---------------- EXCEL EXPORT ---------------- */
+async function downloadExcel(){
+  const records = filteredRecordsForMonth();
+  if(records.length===0){ showToast('No records to export for this month.'); return; }
+  const n = maxBreaksIn(records);
+  const monthVal = document.getElementById('monthPicker').value;
+  const monthLabel = monthVal ? new Date(monthVal+'-01').toLocaleDateString([], {month:'long', year:'numeric'}) : 'All records';
+
+  const header = ['Employee','Date'];
+  for(let i=1;i<=n;i++){ header.push(`Break ${i} Start`, `Break ${i} End`, `Break ${i} Total`); }
+  header.push('Total Break');
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Break Tracker';
+  const sheet = workbook.addWorksheet('Break Report', { views:[{ state:'frozen', ySplit:2 }] });
+
+  // Title banner
+  sheet.mergeCells(1,1,1,header.length);
+  const titleCell = sheet.getCell(1,1);
+  titleCell.value = `Break Tracker Report — ${monthLabel}`;
+  titleCell.font = { name:'Calibri', size:14, bold:true, color:{argb:'FF1B2130'} };
+  titleCell.alignment = { vertical:'middle', horizontal:'left' };
+  titleCell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFF6F3EC'} };
+  sheet.getRow(1).height = 26;
+
+  // Header row
+  const headerRow = sheet.getRow(2);
+  header.forEach((h,i)=>{
+    const cell = headerRow.getCell(i+1);
+    cell.value = h;
+    cell.font = { bold:true, color:{argb:'FFFFFFFF'} };
+    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF1B2130'} };
+    cell.alignment = { vertical:'middle', horizontal:'center' };
+    cell.border = { top:{style:'thin',color:{argb:'FF1B2130'}}, bottom:{style:'thin',color:{argb:'FF1B2130'}},
+                     left:{style:'thin',color:{argb:'FF1B2130'}}, right:{style:'thin',color:{argb:'FF1B2130'}} };
+  });
+  headerRow.height = 20;
+
+  // Data rows
+  const thinLine = {style:'thin', color:{argb:'FFE3DDCC'}};
+  records.forEach((r, idx)=>{
+    const row = sheet.getRow(idx+3);
+    const stripe = idx % 2 === 1;
+    let totalBreak = 0;
+    let col = 1;
+
+    row.getCell(col++).value = r.employee;
+    row.getCell(col++).value = fmtDateHuman(r.date);
+    for(let i=0;i<n;i++){
+      const b = r.breaks[i];
+      if(b){
+        const mins = b.end ? minsBetween(b.start,b.end) : minsBetween(b.start, nowISO());
+        totalBreak += mins;
+        row.getCell(col++).value = fmtTime(b.start);
+        row.getCell(col++).value = b.end?fmtTime(b.end):'ongoing';
+        row.getCell(col++).value = mins+' min';
+      } else {
+        row.getCell(col++).value = '—';
+        row.getCell(col++).value = '—';
+        row.getCell(col++).value = '—';
+      }
+    }
+    const totalColIndex = col;
+    const totalCell = row.getCell(col++);
+    totalCell.value = totalBreak+' min';
+    const overLimit = totalBreak > 60;
+
+    for(let c=1;c<header.length+1;c++){
+      const cell = row.getCell(c);
+      cell.border = { top:thinLine, bottom:thinLine, left:thinLine, right:thinLine };
+      cell.alignment = { vertical:'middle', horizontal: c===1?'left':'center' };
+      if(stripe){ cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFAF8F3'} }; }
+    }
+    if(overLimit){
+      totalCell.font = { bold:true, color:{argb:'FFB94A3D'} };
+      totalCell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFBEAE7'} };
+    } else {
+      totalCell.font = { bold:true, color:{argb:'FFC4831F'} };
+    }
+  });
+
+  // Column widths
+  sheet.getColumn(1).width = 24;
+  sheet.getColumn(2).width = 14;
+  for(let i=3;i<=header.length;i++){ sheet.getColumn(i).width = Math.max(header[i-1].length+4, 13); }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `break-tracker-${monthVal||'all'}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Excel file downloaded');
+}
+
+/* ---------------- PASSKEY & RESET ---------------- */
+async function changePasskey(){
+  const val = document.getElementById('newPasskey').value.trim();
+  if(val.length < 4){ showToast('Passkey should be at least 4 characters.'); return; }
+  await saveSettings({passkey: val});
+  document.getElementById('newPasskey').value = '';
+  showToast('Passkey updated');
+}
+function showResetConfirm(){ document.getElementById('resetConfirmBox').style.display = 'block'; }
+function hideResetConfirm(){ document.getElementById('resetConfirmBox').style.display = 'none'; document.getElementById('resetConfirmInput').value=''; }
+async function doReset(){
+  const val = document.getElementById('resetConfirmInput').value.trim();
+  if(val !== 'RESET'){ showToast('Type RESET exactly to confirm.'); return; }
+  await saveRecords([]);
+  localRecords = [];
+  hideResetConfirm();
+  await renderDashboard();
+  showToast('All break tracker data has been reset');
+}
+
+/* ---------------- INIT ---------------- */
+populateEmployeeSelect();
+tickClock();
+setInterval(tickClock, 1000);
+setInterval(()=>{ if(supervisorUnlocked) renderDashboard(); }, 20000);
+</script>
+</body>
+</html>
