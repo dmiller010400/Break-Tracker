@@ -430,37 +430,67 @@ function showToast(msg){
 }
 
 /* ---------------- STORAGE ---------------- */
-async function loadRecords(){
-  try{
-    const res = await window.storage.get(RECORDS_KEY, true);
-    return res && res.value ? JSON.parse(res.value) : [];
-  }catch(e){ return []; }
+
+async function loadRecords() {
+  try {
+    const data = localStorage.getItem(RECORDS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
 }
-async function saveRecords(records){
-  try{
-    await window.storage.set(RECORDS_KEY, JSON.stringify(records), true);
+
+async function saveRecords(records) {
+  try {
+    localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
     return true;
-  }catch(e){ showToast("Couldn't save — check your connection."); return false; }
+  } catch (e) {
+    console.error(e);
+    showToast("Couldn't save data.");
+    return false;
+  }
 }
-async function updateRecords(mutator){
+
+async function updateRecords(mutator) {
   const latest = await loadRecords();
   const updated = mutator(latest);
   const ok = await saveRecords(updated);
-  if(ok){ localRecords = updated; }
+
+  if (ok) {
+    localRecords = updated;
+  }
+
   return ok;
 }
-async function loadSettings(){
-  try{
-    const res = await window.storage.get(SETTINGS_KEY, true);
-    return res && res.value ? JSON.parse(res.value) : {passkey: DEFAULT_PASSKEY};
-  }catch(e){ return {passkey: DEFAULT_PASSKEY}; }
+
+async function loadSettings() {
+  try {
+    const data = localStorage.getItem(SETTINGS_KEY);
+
+    return data
+      ? JSON.parse(data)
+      : { passkey: DEFAULT_PASSKEY };
+  } catch (e) {
+    console.error(e);
+    return { passkey: DEFAULT_PASSKEY };
+  }
 }
-async function saveSettings(settings){
-  try{
-    await window.storage.set(SETTINGS_KEY, JSON.stringify(settings), true);
+
+async function saveSettings(settings) {
+  try {
+    localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify(settings)
+    );
     return true;
-  }catch(e){ showToast("Couldn't save settings."); return false; }
+  } catch (e) {
+    console.error(e);
+    showToast("Couldn't save settings.");
+    return false;
+  }
 }
+
 
 /* ---------------- TABS ---------------- */
 function switchTab(which){
@@ -575,25 +605,31 @@ function findOrCreateTodayRecord(records){
   }
   return r;
 }
-async function startBreak(){
-  await updateRecords(records=>{
+
+async function startBreak() {
+  const ok = await updateRecords(records => {
     const r = findOrCreateTodayRecord(records);
-    r.breaks.push({start: nowISO(), end: null});
+
+    const existingOpenBreak = r.breaks.find(
+      b => !b.end
+    );
+
+    if (!existingOpenBreak) {
+      r.breaks.push({
+        start: nowISO(),
+        end: null
+      });
+    }
+
     return records;
   });
-  showToast('Break started');
-  renderPunchView();
+
+  if (ok) {
+    await refreshPunchView();
+    showToast("Break started");
+  }
 }
-async function endBreak(){
-  const t = todayStr();
-  await updateRecords(records=>{
-    const r = records.find(r=>r.employee===currentEmployee && r.date===t);
-    if(r){ const ob = r.breaks.find(b=>!b.end); if(ob) ob.end = nowISO(); }
-    return records;
-  });
-  showToast('Break ended — back to work');
-  renderPunchView();
-}
+
 
 /* live clock */
 function tickClock(){
